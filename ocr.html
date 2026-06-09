@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OCR Text Scanner</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 20px;
+            color: #fff;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 700px;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 32px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 1.8rem;
+            margin-bottom: 8px;
+            background: linear-gradient(90deg, #a78bfa, #60a5fa, #34d399);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 0.9rem;
+            margin-bottom: 28px;
+        }
+
+        /* Image Preview Area */
+        .image-area {
+            width: 100%;
+            min-height: 200px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 2px dashed rgba(255, 255, 255, 0.2);
+            border-radius: 16px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            overflow: hidden;
+            position: relative;
+            margin-bottom: 24px;
+        }
+
+        .image-area:hover {
+            border-color: rgba(167, 139, 250, 0.6);
+            background: rgba(0, 0, 0, 0.4);
+        }
+
+        .image-area.has-image {
+            border-style: solid;
+            border-color: rgba(96, 165, 250, 0.4);
+        }
+
+        .image-area img {
+            max-width: 100%;
+            max-height: 300px;
+            object-fit: contain;
+            border-radius: 12px;
+        }
+
+        .image-area .placeholder {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .image-area .placeholder .icon {
+            font-size: 3rem;
+            margin-bottom: 12px;
+        }
+
+        .image-area .placeholder p {
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 0.95rem;
+        }
+
+        /* Buttons */
+        .btn-row {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            flex: 1;
+            min-width: 140px;
+            padding: 14px 20px;
+            border: none;
+            border-radius: 12px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .btn-select {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: #fff;
+        }
+
+        .btn-select:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
+        }
+
+        .btn-scan {
+            background: linear-gradient(135deg, #3b82f6, #06b6d4);
+            color: #fff;
+        }
+
+        .btn-scan:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+        }
+
+        .btn-copy {
+            background: linear-gradient(135deg, #10b981, #34d399);
+            color: #fff;
+        }
+
+        .btn-copy:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+        }
+
+        .btn-camera {
+            background: linear-gradient(135deg, #f59e0b, #ef4444);
+            color: #fff;
+            flex: 1;
+            min-width: 140px;
+        }
+
+        .btn-camera:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(245, 158, 11, 0.4);
+        }
+
+        /* Text Output Area */
+        .output-section {
+            margin-top: 8px;
+        }
+
+        .output-section label {
+            display: block;
+            font-size: 0.85rem;
+            color: rgba(255, 255, 255, 0.6);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .text-output {
+            width: 100%;
+            min-height: 180px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 16px;
+            color: #e2e8f0;
+            font-size: 1rem;
+            line-height: 1.6;
+            resize: vertical;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            transition: border-color 0.3s;
+        }
+
+        .text-output:focus {
+            outline: none;
+            border-color: rgba(96, 165, 250, 0.5);
+        }
+
+        .text-output::placeholder {
+            color: rgba(255, 255, 255, 0.25);
+        }
+
+        /* Action bar under text */
+        .action-bar {
+            display: flex;
+            gap: 10px;
+            margin-top: 12px;
+            flex-wrap: wrap;
+        }
+
+        .action-btn {
+            padding: 8px 16px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .action-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+        }
+
+        /* Progress Bar */
+        .progress-container {
+            width: 100%;
+            margin-top: 16px;
+            display: none;
+        }
+
+        .progress-container.active {
+            display: block;
+        }
+
+        .progress-bar-bg {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #6366f1, #3b82f6, #06b6d4);
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+
+        .progress-text {
+            text-align: center;
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.5);
+            margin-top: 8px;
+        }
+
+        /* Toast Notification */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: rgba(16, 185, 129, 0.9);
+            color: #fff;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: transform 0.4s ease;
+            z-index: 1000;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .toast.error {
+            background: rgba(239, 68, 68, 0.9);
+        }
+
+        /* Hidden inputs */
+        .hidden-input {
+            display: none;
+        }
+
+        /* Stats row */
+        .stats {
+            display: flex;
+            gap: 16px;
+            margin-top: 12px;
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        .stats span {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        /* Responsive */
+        @media (max-width: 500px) {
+            .container {
+                padding: 20px;
+            }
+
+            .btn-row {
+                flex-direction: column;
+            }
+
+            .btn {
+                min-width: unset;
+            }
+
+            h1 {
+                font-size: 1.4rem;
+            }
+        }
+
+        /* Camera modal */
+        .camera-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 999;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+
+        .camera-modal.active {
+            display: flex;
+        }
+
+        .camera-modal video {
+            max-width: 90%;
+            max-height: 60vh;
+            border-radius: 12px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .camera-modal .camera-controls {
+            margin-top: 16px;
+            display: flex;
+            gap: 12px;
+        }
+
+        .camera-modal .camera-controls button {
+            padding: 10px 24px;
+            border: none;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            color: #fff;
+        }
+
+        .camera-modal .btn-capture {
+            background: #10b981;
+        }
+
+        .camera-modal .btn-close-cam {
+            background: #ef4444;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>📷 OCR Text Scanner</h1>
+        <p class="subtitle">Upload or capture an image to extract text — works offline!</p>
+
+        <!-- Image Area -->
+        <div class="image-area" id="imageArea" onclick="document.getElementById('fileInput').click()">
+            <div class="placeholder" id="placeholder">
+                <div class="icon">🖼️</div>
+                <p>Click to select an image or use the buttons below</p>
+            </div>
+            <img id="preview" style="display:none;" alt="Preview">
+        </div>
+
+        <input type="file" id="fileInput" class="hidden-input" accept="image/*" onchange="handleFileSelect(event)">
+        <input type="file" id="cameraInput" class="hidden-input" accept="image/*" capture="environment" onchange="handleFileSelect(event)">
+
+        <!-- Buttons -->
+        <div class="btn-row">
+            <button class="btn btn-select" id="btnSelect" onclick="document.getElementById('fileInput').click()">
+                📁 Select Image
+            </button>
+            <button class="btn btn-camera" id="btnCamera" onclick="openCamera()">
+                📸 Capture
+            </button>
+            <button class="btn btn-scan" id="btnScan" onclick="scanText()" disabled>
+                🔍 Scan Text
+            </button>
+            <button class="btn btn-copy" id="btnCopy" onclick="copyText()" disabled>
+                📋 Copy Text
+            </button>
+        </div>
+
+        <!-- Progress -->
+        <div class="progress-container" id="progressContainer">
+            <div class="progress-bar-bg">
+                <div class="progress-bar-fill" id="progressFill"></div>
+            </div>
+            <p class="progress-text" id="progressText">Initializing OCR engine...</p>
+        </div>
+
+        <!-- Output -->
+        <div class="output-section">
+            <label>Extracted Text</label>
+            <textarea class="text-output" id="textOutput" placeholder="Extracted text will appear here... You can edit it before copying." readonly></textarea>
+
+            <div class="stats" id="stats" style="display:none;">
+                <span>📝 Characters: <strong id="charCount">0</strong></span>
+                <span>📄 Words: <strong id="wordCount">0</strong></span>
+                <span>🔤 Confidence: <strong id="confidence">0%</strong></span>
+            </div>
+
+            <div class="action-bar">
+                <button class="action-btn" onclick="copyText()">📋 Copy</button>
+                <button class="action-btn" onclick="shareText()">📤 Share</button>
+                <button class="action-btn" onclick="clearAll()">🗑️ Clear</button>
+                <button class="action-btn" onclick="downloadText()">💾 Save as TXT</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Camera Modal -->
+    <div class="camera-modal" id="cameraModal">
+        <video id="cameraVideo" autoplay playsinline></video>
+        <canvas id="cameraCanvas" style="display:none;"></canvas>
+        <div class="camera-controls">
+            <button class="btn-capture" onclick="capturePhoto()">📸 Capture</button>
+            <button class="btn-close-cam" onclick="closeCamera()">✕ Close</button>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <!-- Tesseract.js from CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+
+    <script>
+        // ===== STATE =====
+        let currentImage = null;
+        let worker = null;
+        let isScanning = false;
+
+        const imageArea = document.getElementById('imageArea');
+        const preview = document.getElementById('preview');
+        const placeholder = document.getElementById('placeholder');
+        const textOutput = document.getElementById('textOutput');
+        const btnScan = document.getElementById('btnScan');
+        const btnCopy = document.getElementById('btnCopy');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressFill = document.getElementById('progressFill');
+        const progressText = document.getElementById('progressText');
+        const stats = document.getElementById('stats');
+
+        // ===== FILE SELECT =====
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            // Validate
+            if (!file.type.startsWith('image/')) {
+                showToast('Please select a valid image file!', true);
+                return;
+            }
+
+            if (file.size > 20 * 1024 * 1024) {
+                showToast('Image too large! Max 20MB.', true);
+                return;
+            }
+
+            currentImage = file;
+            displayImage(file);
+        }
+
+        function displayImage(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                preview.src = e.target.result;
+                preview.style.display = 'block';
+                placeholder.style.display = 'none';
+                imageArea.classList.add('has-image');
+                btnScan.disabled = false;
+
+                // Reset output
+                textOutput.value = '';
+                textOutput.removeAttribute('readonly');
+                stats.style.display = 'none';
+                btnCopy.disabled = true;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // ===== CAMERA =====
+        async function openCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } }
+                });
+
+                const video = document.getElementById('cameraVideo');
+                video.srcObject = stream;
+
+                document.getElementById('cameraModal').classList.add('active');
+
+                // Store stream for cleanup
+                window.currentCameraStream = stream;
+            } catch (err) {
+                showToast('Camera access denied or not available.', true);
+                console.error(err);
+            }
+        }
+
+        function capturePhoto() {
+            const video = document.getElementById('cameraVideo');
+            const canvas = document.getElementById('cameraCanvas');
+
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0);
+
+            canvas.toBlob((blob) => {
+                const file = new File([blob], 'camera-capture.png', { type: 'image/png' });
+                currentImage = file;
+                displayImage(file);
+                closeCamera();
+                showToast('Photo captured! 📸');
+            }, 'image/png');
+        }
+
+        function closeCamera() {
+            const modal = document.getElementById('cameraModal');
+            modal.classList.remove('active');
+
+            if (window.currentCameraStream) {
+                window.currentCameraStream.getTracks().forEach(track => track.stop());
+                window.currentCameraStream = null;
+            }
+        }
+
+        // ===== OCR SCAN =====
+        async function scanText() {
+            if (!currentImage) {
+                showToast('Please select an image first!', true);
+                return;
+            }
+
+            if (isScanning) return;
+            isScanning = true;
+
+            // UI updates
+            btnScan.disabled = true;
+            btnCopy.disabled = true;
+            textOutput.value = '';
+            textOutput.setAttribute('readonly', true);
+            progressContainer.classList.add('active');
+            stats.style.display = 'none';
+
+            try {
+                const result = await Tesseract.recognize(
+                    currentImage,
+                    'eng',
+                    {
+                        logger: (m) => {
+                            if (m.status === 'recognizing text') {
+                                const pct = Math.round(m.progress * 100);
+                                progressFill.style.width = pct + '%';
+                                progressText.textContent = `Recognizing text... ${pct}%`;
+                            } else if (m.status === 'loading tesseract core') {
+                                progressText.textContent = 'Loading OCR engine...';
+                                progressFill.style.width = '10%';
+                            } else if (m.status === 'initializing tesseract') {
+                                progressText.textContent = 'Initializing...';
+                                progressFill.style.width = '5%';
+                            } else if (m.status === 'loading language traineddata') {
+                                progressText.textContent = 'Loading language data...';
+                                progressFill.style.width = '30%';
+                            } else if (m.status === 'initializing api') {
+                                progressText.textContent = 'Preparing OCR...';
+                                progressFill.style.width = '60%';
+                            }
+                        }
+                    }
+                );
+
+                const text = result.data.text.trim();
+                const confidence = Math.round(result.data.confidence);
+
+                if (!text || text.length < 1) {
+                    textOutput.value = '⚠️ No text detected in this image. Try a clearer image with visible text.';
+                    textOutput.removeAttribute('readonly');
+                    showToast('No text found in image.', true);
+                } else {
+                    textOutput.value = text;
+                    textOutput.removeAttribute('readonly');
+                    btnCopy.disabled = false;
+
+                    // Stats
+                    document.getElementById('charCount').textContent = text.length;
+                    document.getElementById('wordCount').textContent = text.split(/\s+/).filter(w => w.length > 0).length;
+                    document.getElementById('confidence').textContent = confidence + '%';
+                    stats.style.display = 'flex';
+
+                    showToast(`Text extracted! (${confidence}% confidence) ✅`);
+                }
+
+            } catch (err) {
+                console.error(err);
+                showToast('OCR failed: ' + err.message, true);
+                textOutput.value = '❌ Error: ' + err.message;
+                textOutput.removeAttribute('readonly');
+            } finally {
+                isScanning = false;
+                btnScan.disabled = false;
+                progressContainer.classList.remove('active');
+                progressFill.style.width = '0%';
+            }
+        }
+
+        // ===== COPY =====
+        function copyText() {
+            const text = textOutput.value;
+            if (!text || text.startsWith('⚠️') || text.startsWith('❌')) {
+                showToast('Nothing to copy!', true);
+                return;
+            }
+
+            navigator.clipboard.writeText(text).then(() => {
+                showToast('Text copied to clipboard! 📋');
+            }).catch(() => {
+                // Fallback
+                textOutput.select();
+                document.execCommand('copy');
+                showToast('Text copied! 📋');
+            });
+        }
+
+        // ===== SHARE =====
+        function shareText() {
+            const text = textOutput.value;
+            if (!text || text.startsWith('⚠️') || text.startsWith('❌')) {
+                showToast('Nothing to share!', true);
+                return;
+            }
+
+            if (navigator.share) {
+                navigator.share({
+                    title: 'OCR Extracted Text',
+                    text: text
+                }).catch(() => {});
+            } else {
+                copyText();
+                showToast('Copied! Paste it anywhere to share. 📤');
+            }
+        }
+
+        // ===== DOWNLOAD =====
+        function downloadText() {
+            const text = textOutput.value;
+            if (!text || text.startsWith('⚠️') || text.startsWith('❌')) {
+                showToast('Nothing to save!', true);
+                return;
+            }
+
+            const blob = new Blob([text], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'ocr-extracted-text.txt';
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('File downloaded! 💾');
+        }
+
+        // ===== CLEAR =====
+        function clearAll() {
+            currentImage = null;
+            preview.src = '';
+            preview.style.display = 'none';
+            placeholder.style.display = 'block';
+            imageArea.classList.remove('has-image');
+            textOutput.value = '';
+            textOutput.setAttribute('readonly', true);
+            textOutput.placeholder = 'Extracted text will appear here... You can edit it before copying.';
+            btnScan.disabled = true;
+            btnCopy.disabled = true;
+            stats.style.display = 'none';
+            progressContainer.classList.remove('active');
+            progressFill.style.width = '0%';
+
+            document.getElementById('fileInput').value = '';
+            document.getElementById('cameraInput').value = '';
+
+            showToast('Cleared! 🗑️');
+        }
+
+        // ===== TOAST =====
+        function showToast(message, isError = false) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = 'toast' + (isError ? ' error' : '');
+            toast.classList.add('show');
+
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // ===== DRAG & DROP =====
+        imageArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            imageArea.style.borderColor = 'rgba(96, 165, 250, 0.8)';
+        });
+
+        imageArea.addEventListener('dragleave', () => {
+            imageArea.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+        });
+
+        imageArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            imageArea.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+
+            const file = e.dataTransfer.files[0];
+            if (file && file.type.startsWith('image/')) {
+                currentImage = file;
+                displayImage(file);
+                showToast('Image dropped! ✅');
+            } else {
+                showToast('Please drop an image file!', true);
+            }
+        });
+
+        // ===== PASTE FROM CLIPBOARD =====
+        document.addEventListener('paste', (e) => {
+            const items = e.clipboardData.items;
+            for (let item of items) {
+                if (item.type.startsWith('image/')) {
+                    const file = item.getAsFile();
+                    currentImage = file;
+                    displayImage(file);
+                    showToast('Image pasted from clipboard! 📋');
+                    break;
+                }
+            }
+        });
+    </script>
+
+</body>
+</html>
